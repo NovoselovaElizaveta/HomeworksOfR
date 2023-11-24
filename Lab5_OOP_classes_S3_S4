@@ -1,0 +1,259 @@
+#renv::init() # инициализация виртуального окружения
+#renv::install() # установка библиотеки из CRAN
+#renv::snapshot() # делаем снимок версий библиотек в нашем виртуальном окружении
+# фиксируем этот список в .lock-файле для возможности восстановления
+# renv::restore() # команда откатится к предыдушему удачному обновления библиотек
+
+# ------------------- 
+# Лабораторная работа №5:
+# Написание классов S3, S4.
+
+# Для примера посмотрим на регрессионный анализ с использованием ф-ии lm()
+?lm
+x <- c(1:3)
+y <- c(1,3,8)
+lmout <- lm(y~x)
+class(lmout)
+lmout # это объект класса lm
+
+# напишем класс S3
+j <- list(
+  name="Joe",
+  salary=55000,
+  union=T
+)
+class(j) <- "employee"
+?class
+attributes(j)
+
+j # вызвали метод print по умлочанию к этому классу
+
+# -------------Напишем собственный метод для нашего класса j
+print.employee <- function(wrkr){
+  cat(wrkr$name, "\n")
+  cat("Зарплата", wrkr$salary, "\n")
+  cat("Является ли членом профсоюза?", wrkr$union, "\n")
+}
+
+# теперь любой вызов print() для объекта класса employee теперь должен обозначаться print.employee()
+methods(,"employee")
+print.employee
+
+j
+
+
+# ----------- Наследование
+# Смысл наследования - в создании новых объектов, как специализированных версий объектов-родителей
+
+k <- list(
+  name = "Kate",
+  salary = 68000,
+  union = F,
+  hrsthismonth = 2 # новый класс содержит одну доп переменную по сравнению с родительским
+)
+?c
+class(k) <- c("hrlyemployee", "employee") # эта доп переменная указывается первой
+k
+
+
+# Задание №1 - создать класс Домашнее животное с подклассами (кошка, собака, корова), у которых есть общие методы (наследуемые) и собственные.
+# Базовый класс "Животное"
+Animal <- setRefClass("Animal",
+                      methods = list(
+                        initialize = function(name) {
+                          if (!missing(name)) self$name <- name
+                        },
+                        eat = function() {
+                          cat(paste("Животное", self$name, "ест\n"))
+                        }
+                      ))
+
+# Подкласс "Кошка"
+Cat <- setRefClass("Cat",
+                   contains = "Animal",
+                   methods = list(
+                     initialize = function(name) {
+                       if (!missing(name)) self$name <- name
+                     },
+                     purr = function() {
+                       cat(paste("Кошка", self$name, "мурлычет\n"))
+                     }
+                   ))
+
+# Подкласс "Собака"
+Dog <- setRefClass("Dog",
+                   contains = "Animal",
+                   methods = list(
+                     initialize = function(name) {
+                       if (!missing(name)) self$name <- name
+                     },
+                     bark = function() {
+                       cat(paste("Собака", self$name, "лающая\n"))
+                     }
+                   ))
+
+# Подкласс "Корова"
+Cow <- setRefClass("Cow",
+                   contains = "Animal",
+                   methods = list(
+                     initialize = function(name) {
+                       if (!missing(name)) self$name <- name
+                     },
+                     moo = function() {
+                       cat(paste("Корова", self$name, "мычит\n"))
+                     }
+                   ))
+
+# Пример использования классов
+myCat <- Cat$new("Мурка")
+myDog <- Dog$new("Бобик")
+myCow <- Cow$new("Бурёнка")
+
+myCat$eat()   # Вызов общего метода для Кошки и Животного
+myDog$eat()   # Вызов общего метода для Собаки и Животного
+myCow$eat()   # Вызов общего метода для Коровы и Животного
+
+myCat$purr()  # Вызов собственного метода для Кошки
+myDog$bark()  # Вызов собственного метода для Собаки
+myCow$moo()   # Вызов собственного метода для Коровы
+
+# Задание №2 - создать класс Автомобиль с подклассами и своими методами.
+
+
+# S4 класс - более безопасный с точки зрения типов данных и ошибок в орфографии.
+# S4  класс задается немного по-другому
+setClass("employee",
+         representation(
+           name="character",
+           salary="numeric",
+           union="logical")
+)
+joe <- new("employee", name="Joe", salary=55000, union=T)
+joe
+
+joe@name
+joe@salary
+joe@union
+
+slot(joe, "salary") <- 88000
+joe@salary
+
+# обобщенный метод для класса S4
+setMethod("show", "employee",
+          function(object){
+            inorout <- ifelse(object@union, "is", "is not")
+            cat(object@name, "has a salary of", object@salary,
+                "and", inorout, "in the union", "\n")
+          }
+)
+joe
+
+
+
+# Практическое задание:
+# 1) напишите класс "Автомобиль". Пропишите в нем базовые функции.
+# Создайте несколько дочерних классов, которые наследуют общие функции родительского класса
+# и при этом создают новые, которых раньше не было.
+
+# В частности - базовая функция всех автомобилей - ехать (print("I'm driving")) и гудеть (print("biiip-biiip!!"))
+# этот родительский метод будут наследовать все потомки. Плюс - добавлять свои методы.
+
+# Например:
+# Автомобиль -> Дизельный автомобиль - ехать на солярке
+# Автомобиль -> Бензиновый автомобиль - ехать на бензине
+# Автомобиль -> Электромобиль - ехать на электричестве
+
+# 2) Для запуска написанных классов - напишите функцию, которая:
+# 2.1) спросит пользователя - какой класс автомобилей его интересует, запомнит введенную инфу
+# 2.2) в зависимости от введенной инфы - запустит создание экземпляра указанного класса
+# 2.3) созданный класс должны вывести в консоль все родительские и собственные методы
+
+
+# 3) сохраните это задание в виде локального Гит-репозитория, запушьте на Гитхаб, пришлите ссылку в Тимз 
+# Определение класса "Автомобиль"
+
+Car <- setClass("Car", 
+                slots = list( 
+                  fuel = "character" 
+                ), 
+                prototype = list( 
+                  drive = function() { 
+                    print("I'm driving") 
+                  }, 
+                  honk = function() { 
+                    print("biiip-biiip!!") 
+                  } 
+                ) 
+) 
+
+# Дочерний класс "Дизельный автомобиль" 
+DieselCar <- setClass("DieselCar", 
+                      contains = "Car", 
+                      slots = list( 
+                        fuel = "дизель" 
+                      ), 
+                      prototype = list( 
+                        drive = function() { 
+                          print("Еду на солярке") 
+                          NextMethod() # Вызов родительского метода 
+                        } 
+                      ) 
+) 
+
+# Дочерний класс "Бензиновый автомобиль" 
+PetrolCar <- setClass("PetrolCar", 
+                      contains = "Car", 
+                      slots = list( 
+                        fuel = "бензин" 
+                      ), 
+                      prototype = list( 
+                        drive = function() { 
+                          print("Еду на бензине") 
+                          NextMethod() # Вызов родительского метода 
+                        } 
+                      ) 
+) 
+
+# Дочерний класс "Электромобиль" 
+ElectricCar <- setClass("ElectricCar", 
+                        contains = "Car", 
+                        slots = list( 
+                          fuel = "электричество" 
+                        ), 
+                        prototype = list( 
+                          drive = function() { 
+                            print("Еду на электричестве") 
+                            NextMethod() # Вызов родительского метода 
+                          } 
+                        ) 
+) 
+
+# Функция для создания экземпляра указанного класса 
+createCar <- function(carType) { 
+  if (carType == "Дизельный") { 
+    return(DieselCar()) 
+  } else if (carType == "Бензиновый") { 
+    return(PetrolCar()) 
+  } else if (carType == "Электромобиль") { 
+    return(ElectricCar()) 
+  } else { 
+    stop("Неверный тип автомобиля") 
+  } 
+} 
+
+# Главная функция для запуска программы 
+runProgram <- function() { 
+  carType <- readline("Какой класс автомобилей вас интересует? (Дизельный/Бензиновый/Электромобиль): ") 
+  
+  car <- createCar(carType) 
+  
+  # Вывод родительских и собственных методов 
+  cat("Родительские методы:\n") 
+  showMethods(classes = "Car") 
+  cat("\nСобственные методы:\n") 
+  showMethods(car) 
+} 
+
+# Запуск программы 
+runProgram()
+ 
