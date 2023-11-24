@@ -1,0 +1,33 @@
+# Установка и загрузка библиотек 
+install.packages(c("class", "caret", "lattice", "sendmailR", "readr")) 
+
+# 1.Устанавливаем рабочую директорию 
+library(readr) 
+iris <- read_csv("C:/Method_R/Lab10/iris_data-set/8836201-6f9306ad21398ea43cba4f7d537619d0e07d5ae3/iris.csv") 
+View(iris) 
+
+# 2.Визуализация данных 
+library(caret) 
+xyplot(iris$sepal.length + iris$sepal.width + iris$petal.length + iris$petal.width ~ iris$variety, auto.key = list(columns = 3)) 
+
+# 3.Разделение данных на обучающую и тестовую выборки 
+set.seed(123) 
+trainIndex <- createDataPartition(iris$variety, p = 0.7, list = FALSE) 
+trainData <- iris[trainIndex, ] 
+testData <- iris[-trainIndex, ] 
+
+# 4.Обучение модели KNN 
+library(class) 
+knn_model <- knn(trainData[, 1:4], testData[, 1:4], trainData$variety, k = 3) 
+
+# 5.Оценка точности модели 
+accuracy <- mean(knn_model == testData$variety) 
+cat("Точность модели KNN:", accuracy, "\n") 
+
+# 6.Отправка результатов по почте 
+library(sendmailR) 
+from = "<ryabionochkaaa@gmail.com>" 
+to = c("<ryabionochkaaa@gmail.com>","<ryabionochkaaa@gmail.com>") 
+subject <- "Результаты классификации KNN" 
+body <- paste("Точность модели KNN:", accuracy) 
+sendmail(from = from, to = to, subject = subject, msg = body, control = list(smtpServer = "smtp.gmail.com"))
